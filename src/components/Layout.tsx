@@ -11,7 +11,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       {/* Ocean animated background */}
       <AnimatedBackground />
       {/* Navigation bar, hidden on login page */}
-      {!isLogin && <NavBar />}
+      {!isLogin && <Navbar />}
       {/* Content layer with padding */}
       <main className="relative z-10 pt-20 pb-16 px-4 sm:px-6 lg:px-8">
         {children}
