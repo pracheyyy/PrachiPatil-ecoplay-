@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useGame } from "../context/GameContext";
-import { TreePine, Droplet, Wind, Flower, Zap, Filter, AlertTriangle } from 'lucide-react';
+import { TreePine, Droplet, Wind, Zap, Filter, AlertTriangle } from 'lucide-react';
 import ProjectCardSkeleton from "../components/ProjectCardSkeleton";
+import Tooltip from "../components/Tooltip";
 
 interface ShopItem {
   id: string;
@@ -10,7 +11,28 @@ interface ShopItem {
   label: string;
   cost: number;
   category: 'plants' | 'energy' | 'water' | 'wildlife';
+  tooltip: string;
 }
+
+const RESOURCE_TOOLTIPS = {
+  points: 'Eco points — spend in the shop to grow your village',
+  air: 'Air quality — plant trees and add solar panels to improve',
+  water: 'Water quality — install water filters to purify',
+  bio: 'Biodiversity — trees, gardens, and wildlife raise this score',
+  filter: 'Filter health — drops over time; buy a water filter to restore',
+} as const;
+
+const SHOP_ITEMS: ShopItem[] = [
+  { id: 'tree', emoji: "🌳", label: "Plant a Tree", cost: 50, category: 'plants', tooltip: 'Adds a tree — +5 air, +3 biodiversity' },
+  { id: 'apple', emoji: "🍎", label: "Apple Tree", cost: 75, category: 'plants', tooltip: 'Fruit tree — +5 air, +3 biodiversity' },
+  { id: 'flower', emoji: "🌼", label: "Flower Garden", cost: 40, category: 'wildlife', tooltip: 'Wildflower patch — +4 biodiversity' },
+  { id: 'bird', emoji: "🐦", label: "Add Birds", cost: 60, category: 'wildlife', tooltip: 'Attract birds — +4 biodiversity' },
+  { id: 'cottage', emoji: "🏡", label: "Cottage", cost: 150, category: 'plants', tooltip: 'Cozy cottage — decorative placement' },
+  { id: 'solar', emoji: "⚡", label: "Solar Panel", cost: 100, category: 'energy', tooltip: 'Clean energy — +8 air, −5 pollution' },
+  { id: 'filter', emoji: "💧", label: "Water Filter", cost: 75, category: 'water', tooltip: 'Water filter — +10 water, restores filter health' },
+];
+
+const EMOJI_TO_ITEM = Object.fromEntries(SHOP_ITEMS.map((item) => [item.emoji, item]));
 
 interface PlacedItem {
   emoji: string;
@@ -28,16 +50,6 @@ const EcoVillage = () => {
   const [popup, setPopup] = useState<string | null>(null);
   const [showNotifications, setShowNotifications] = useState(true);
   const [draggedItem, setDraggedItem] = useState<string | null>(null);
-
-  const shopItems: ShopItem[] = [
-    { id: 'tree', emoji: "🌳", label: "Plant a Tree", cost: 50, category: 'plants' },
-    { id: 'apple', emoji: "🍎", label: "Apple Tree", cost: 75, category: 'plants' },
-    { id: 'flower', emoji: "🌼", label: "Flower Garden", cost: 40, category: 'wildlife' },
-    { id: 'bird', emoji: "🐦", label: "Add Birds", cost: 60, category: 'wildlife' },
-    { id: 'cottage', emoji: "🏡", label: "Cottage", cost: 150, category: 'plants' },
-    { id: 'solar', emoji: "⚡", label: "Solar Panel", cost: 100, category: 'energy' },
-    { id: 'filter', emoji: "💧", label: "Water Filter", cost: 75, category: 'water' },
-  ];
 
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 1200);
@@ -119,15 +131,17 @@ const EcoVillage = () => {
                 <AlertTriangle className="h-5 w-5" />
                 Village Update
               </h3>
-              <button
-                onClick={() => {
-                  setShowNotifications(false);
-                  dispatch({ type: 'CLEAR_NOTIFICATIONS' });
-                }}
-                className="text-white/80 hover:text-white"
-              >
-                ✕
-              </button>
+              <Tooltip content="Dismiss village updates" disableTouchToggle>
+                <button
+                  onClick={() => {
+                    setShowNotifications(false);
+                    dispatch({ type: 'CLEAR_NOTIFICATIONS' });
+                  }}
+                  className="text-white/80 hover:text-white"
+                >
+                  ✕
+                </button>
+              </Tooltip>
             </div>
             <div className="space-y-1 text-sm">
               {notifications.map((n, i) => (
@@ -151,31 +165,41 @@ const EcoVillage = () => {
           ))
         ) : (
           <>
-            <div className="bg-white/10 backdrop-blur-lg rounded-xl p-3 border border-white/20 text-center">
-              <Zap className="h-6 w-6 text-yellow-400 mx-auto mb-1" />
-              <div className="text-xl font-bold text-white">{user.points}</div>
-              <div className="text-xs text-blue-200">Points</div>
-            </div>
-            <div className="bg-white/10 backdrop-blur-lg rounded-xl p-3 border border-white/20 text-center">
-              <Wind className="h-6 w-6 text-blue-400 mx-auto mb-1" />
-              <div className="text-xl font-bold text-white">{ecoVillage.airQuality}%</div>
-              <div className="text-xs text-blue-200">Air</div>
-            </div>
-            <div className="bg-white/10 backdrop-blur-lg rounded-xl p-3 border border-white/20 text-center">
-              <Droplet className="h-6 w-6 text-cyan-400 mx-auto mb-1" />
-              <div className="text-xl font-bold text-white">{ecoVillage.waterQuality}%</div>
-              <div className="text-xs text-blue-200">Water</div>
-            </div>
-            <div className="bg-white/10 backdrop-blur-lg rounded-xl p-3 border border-white/20 text-center">
-              <TreePine className="h-6 w-6 text-green-400 mx-auto mb-1" />
-              <div className="text-xl font-bold text-white">{ecoVillage.biodiversity}%</div>
-              <div className="text-xs text-blue-200">Bio</div>
-            </div>
-            <div className={`bg-white/10 backdrop-blur-lg rounded-xl p-3 border ${ecoVillage.filterHealth < 30 ? 'border-red-500/50' : 'border-white/20'} text-center`}>
-              <Filter className={`h-6 w-6 mx-auto mb-1 ${ecoVillage.filterHealth < 30 ? 'text-red-400' : 'text-cyan-400'}`} />
-              <div className="text-xl font-bold text-white">{ecoVillage.filterHealth}%</div>
-              <div className="text-xs text-blue-200">Filter</div>
-            </div>
+            <Tooltip content={RESOURCE_TOOLTIPS.points}>
+              <div className="bg-white/10 backdrop-blur-lg rounded-xl p-3 border border-white/20 text-center cursor-default">
+                <Zap className="h-6 w-6 text-yellow-400 mx-auto mb-1" />
+                <div className="text-xl font-bold text-white">{user.points}</div>
+                <div className="text-xs text-blue-200">Points</div>
+              </div>
+            </Tooltip>
+            <Tooltip content={RESOURCE_TOOLTIPS.air}>
+              <div className="bg-white/10 backdrop-blur-lg rounded-xl p-3 border border-white/20 text-center cursor-default">
+                <Wind className="h-6 w-6 text-blue-400 mx-auto mb-1" />
+                <div className="text-xl font-bold text-white">{ecoVillage.airQuality}%</div>
+                <div className="text-xs text-blue-200">Air</div>
+              </div>
+            </Tooltip>
+            <Tooltip content={RESOURCE_TOOLTIPS.water}>
+              <div className="bg-white/10 backdrop-blur-lg rounded-xl p-3 border border-white/20 text-center cursor-default">
+                <Droplet className="h-6 w-6 text-cyan-400 mx-auto mb-1" />
+                <div className="text-xl font-bold text-white">{ecoVillage.waterQuality}%</div>
+                <div className="text-xs text-blue-200">Water</div>
+              </div>
+            </Tooltip>
+            <Tooltip content={RESOURCE_TOOLTIPS.bio}>
+              <div className="bg-white/10 backdrop-blur-lg rounded-xl p-3 border border-white/20 text-center cursor-default">
+                <TreePine className="h-6 w-6 text-green-400 mx-auto mb-1" />
+                <div className="text-xl font-bold text-white">{ecoVillage.biodiversity}%</div>
+                <div className="text-xs text-blue-200">Bio</div>
+              </div>
+            </Tooltip>
+            <Tooltip content={ecoVillage.filterHealth < 30 ? `${RESOURCE_TOOLTIPS.filter} — needs attention!` : RESOURCE_TOOLTIPS.filter}>
+              <div className={`bg-white/10 backdrop-blur-lg rounded-xl p-3 border ${ecoVillage.filterHealth < 30 ? 'border-red-500/50' : 'border-white/20'} text-center cursor-default`}>
+                <Filter className={`h-6 w-6 mx-auto mb-1 ${ecoVillage.filterHealth < 30 ? 'text-red-400' : 'text-cyan-400'}`} />
+                <div className="text-xl font-bold text-white">{ecoVillage.filterHealth}%</div>
+                <div className="text-xs text-blue-200">Filter</div>
+              </div>
+            </Tooltip>
           </>
         )}
       </div>
@@ -205,21 +229,28 @@ const EcoVillage = () => {
             <div className="absolute top-16 left-1/3 text-4xl z-5 pointer-events-none opacity-70">☁️</div>
 
             <div className="relative z-20 w-full h-full">
-              {landscape.map((item, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ scale: 0, rotate: -45 }}
-                  animate={{ scale: 1, rotate: 0 }}
-                  transition={{ type: "spring", delay: index * 0.05 }}
-                  className="text-6xl absolute cursor-pointer drop-shadow-[0_4px_4px_rgba(0,0,0,0.6)]"
-                  style={{
-                    left: `${item.x}%`,
-                    top: `${item.y}%`,
-                  }}
-                >
-                  {item.emoji}
-                </motion.div>
-              ))}
+              {landscape.map((item, index) => {
+                const placed = EMOJI_TO_ITEM[item.emoji];
+                const tooltipText = placed
+                  ? `${placed.label} — placed in your village`
+                  : `${item.emoji} — placed item`;
+                return (
+                  <Tooltip key={index} content={tooltipText}>
+                    <motion.div
+                      initial={{ scale: 0, rotate: -45 }}
+                      animate={{ scale: 1, rotate: 0 }}
+                      transition={{ type: "spring", delay: index * 0.05 }}
+                      className="text-6xl absolute cursor-pointer drop-shadow-[0_4px_4px_rgba(0,0,0,0.6)]"
+                      style={{
+                        left: `${item.x}%`,
+                        top: `${item.y}%`,
+                      }}
+                    >
+                      {item.emoji}
+                    </motion.div>
+                  </Tooltip>
+                );
+              })}
             </div>
 
             <div className="absolute bottom-0 left-0 right-0 h-20 z-30 pointer-events-none flex items-end justify-around text-4xl pb-2">
@@ -247,16 +278,23 @@ const EcoVillage = () => {
         ) : inventory.length === 0 ? (
           <p className="text-gray-300">Buy items from the shop to place them in your village!</p>
         ) : (
-          inventory.map((emoji, i) => (
-            <div
-              key={i}
-              draggable
-              onDragStart={() => handleDragStart(emoji)}
-              className="text-5xl p-3 bg-green-700/40 rounded-xl hover:bg-green-700/60 hover:scale-110 transition-transform cursor-grab active:cursor-grabbing"
-            >
-              {emoji}
-            </div>
-          ))
+          inventory.map((emoji, i) => {
+            const item = EMOJI_TO_ITEM[emoji];
+            const tooltipText = item
+              ? `${item.label} — drag onto the village to place`
+              : `${emoji} — drag to place`;
+            return (
+              <Tooltip key={i} content={tooltipText}>
+                <div
+                  draggable
+                  onDragStart={() => handleDragStart(emoji)}
+                  className="text-5xl p-3 bg-green-700/40 rounded-xl hover:bg-green-700/60 hover:scale-110 transition-transform cursor-grab active:cursor-grabbing"
+                >
+                  {emoji}
+                </div>
+              </Tooltip>
+            );
+          })
         )}
       </div>
 
@@ -285,27 +323,28 @@ const EcoVillage = () => {
               transition={{ duration: 0.4, ease: "easeOut" }}
               className="contents"
             >
-              {shopItems.map((item) => {
+              {SHOP_ITEMS.map((item) => {
                 const canAfford = user.points >= item.cost;
                 return (
-                  <motion.button
-                    key={item.id}
-                    onClick={() => buyItem(item)}
-                    disabled={!canAfford}
-                    whileHover={{ scale: canAfford ? 1.05 : 1 }}
-                    whileTap={{ scale: canAfford ? 0.95 : 1 }}
-                    className={`bg-white/10 backdrop-blur-lg p-4 rounded-xl border transition ${
-                      canAfford
-                        ? 'border-green-400/50 hover:bg-green-700/30 cursor-pointer'
-                        : 'border-white/10 opacity-50 cursor-not-allowed'
-                    }`}
-                  >
-                    <div className="text-5xl mb-2">{item.emoji}</div>
-                    <div className="text-sm font-semibold">{item.label}</div>
-                    <div className={`text-xs mt-1 ${canAfford ? 'text-yellow-300' : 'text-red-300'}`}>
-                      {item.cost} points
-                    </div>
-                  </motion.button>
+                  <Tooltip key={item.id} content={item.tooltip} disableTouchToggle>
+                    <motion.button
+                      onClick={() => buyItem(item)}
+                      disabled={!canAfford}
+                      whileHover={{ scale: canAfford ? 1.05 : 1 }}
+                      whileTap={{ scale: canAfford ? 0.95 : 1 }}
+                      className={`bg-white/10 backdrop-blur-lg p-4 rounded-xl border transition w-full ${
+                        canAfford
+                          ? 'border-green-400/50 hover:bg-green-700/30 cursor-pointer'
+                          : 'border-white/10 opacity-50 cursor-not-allowed'
+                      }`}
+                    >
+                      <div className="text-5xl mb-2">{item.emoji}</div>
+                      <div className="text-sm font-semibold">{item.label}</div>
+                      <div className={`text-xs mt-1 ${canAfford ? 'text-yellow-300' : 'text-red-300'}`}>
+                        {item.cost} points
+                      </div>
+                    </motion.button>
+                  </Tooltip>
                 );
               })}
             </motion.div>
