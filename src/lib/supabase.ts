@@ -256,6 +256,33 @@ export const dbFunctions = {
     return true;
   },
 
+  async updateCommunityPostLikes(postId: string, increment: boolean): Promise<boolean> {
+    const { error } = await supabase.rpc('increment_post_likes', {
+      p_post_id: postId,
+      p_increment: increment
+    });
+    
+    if (error) {
+      console.error('Error updating post likes:', error);
+      return false;
+    }
+    
+    return true;
+  },
+
+  async addCommunityPostReply(postId: string): Promise<boolean> {
+    const { error } = await supabase.rpc('increment_post_replies', {
+      p_post_id: postId
+    });
+    
+    if (error) {
+      console.error('Error updating post replies:', error);
+      return false;
+    }
+    
+    return true;
+  },
+
   // Events functions
   async getEvents(limit: number = 20): Promise<Event[]> {
     const { data, error } = await supabase

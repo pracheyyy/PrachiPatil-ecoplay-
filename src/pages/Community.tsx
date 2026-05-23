@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Award, Clock, MessageCircle, Plus, Reply, Search, Share2, ThumbsUp } from 'lucide-react';
 import {
@@ -14,111 +14,27 @@ import {
   secondaryButton,
   softCard,
 } from '../lib/ui';
-
-interface Post {
-  id: string;
-  author: string;
-  avatar: string;
-  title: string;
-  content: string;
-  category: string;
-  timestamp: string;
-  likes: number;
-  replies: number;
-  isLiked: boolean;
-  isSolved: boolean;
-  tags: string[];
-}
+import { useAuth } from '../context/AuthContext';
+import { dbFunctions, CommunityPost } from '../lib/supabase';
 
 const Community = () => {
+  const { user } = useAuth();
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [showNewPost, setShowNewPost] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [newPost, setNewPost] = useState({
     title: '',
     content: '',
     category: 'question',
     tags: ''
   });
-  const [posts, setPosts] = useState<Post[]>([
-    {
-      id: '1',
-      author: 'EcoEnthusiast',
-      avatar: 'EE',
-      title: 'Best plants for indoor air purification?',
-      content:
-        "I'm looking to improve my home's air quality naturally. What are the most effective plants for removing toxins and producing oxygen indoors? I have medium to low light conditions.",
-      category: 'question',
-      timestamp: '2 hours ago',
-      likes: 24,
-      replies: 8,
-      isLiked: false,
-      isSolved: false,
-      tags: ['plants', 'indoor', 'air-quality']
-    },
-    {
-      id: '2',
-      author: 'GreenGuru',
-      avatar: 'GG',
-      title: 'DIY composting system success story',
-      content:
-        "Just wanted to share my homemade composting system that's been working amazingly for 6 months. Used recycled materials and it's producing rich soil for my garden. Happy to share the blueprint if anyone's interested.",
-      category: 'project',
-      timestamp: '5 hours ago',
-      likes: 42,
-      replies: 15,
-      isLiked: true,
-      isSolved: false,
-      tags: ['composting', 'DIY', 'recycling']
-    },
-    {
-      id: '3',
-      author: 'SolarSaver',
-      avatar: 'SS',
-      title: 'Solar panel installation permit process?',
-      content:
-        "I'm planning to install solar panels on my roof but I'm confused about the permit process. Does anyone have experience with residential solar installation permits? What documents do I need?",
-      category: 'question',
-      timestamp: '1 day ago',
-      likes: 18,
-      replies: 12,
-      isLiked: false,
-      isSolved: true,
-      tags: ['solar', 'permits', 'installation']
-    },
-    {
-      id: '4',
-      author: 'ZeroWasteZara',
-      avatar: 'ZZ',
-      title: 'Zero-waste grocery shopping tips',
-      content:
-        "After 2 years of zero-waste living, here are my top tips for plastic-free grocery shopping: bring your own containers, shop at farmers markets, buy in bulk, and don't forget mesh produce bags.",
-      category: 'tips',
-      timestamp: '1 day ago',
-      likes: 67,
-      replies: 23,
-      isLiked: true,
-      isSolved: false,
-      tags: ['zero-waste', 'shopping', 'plastic-free']
-    },
-    {
-      id: '5',
-      author: 'ClimateConscious',
-      avatar: 'CC',
-      title: 'Local climate action groups: how to find and join?',
-      content:
-        "I want to get more involved in climate activism in my community. How do I find local environmental groups? What should I expect when joining? Any tips for someone who's new to activism?",
-      category: 'discussion',
-      timestamp: '2 days ago',
-      likes: 31,
-      replies: 19,
-      isLiked: false,
-      isSolved: false,
-      tags: ['activism', 'community', 'climate-action']
-    }
-  ]);
+  const [posts, setPosts] = useState<CommunityPost[]>([]);
   const [replyModal, setReplyModal] = useState<{ open: boolean; postId?: string }>({ open: false });
   const [replyText, setReplyText] = useState('');
+  
+  // Track which posts the user has liked in this session
+  const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
 
   const categories = [
     { id: 'all', name: 'All Posts' },
@@ -128,14 +44,43 @@ const Community = () => {
     { id: 'discussion', name: 'Discussion' }
   ];
 
-  const handleLike = (id: string) => {
+  const fetchPosts = async () => {
+    setLoading(true);
+    try {
+      const data = await dbFunctions.getCommunityPosts(50);
+      setPosts(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPosts();
+  }, []);
+
+  const handleLike = async (id: string) => {
+    const isLiked = likedPosts.has(id);
+    const increment = !isLiked;
+    
+    // Optimistic UI
     setPosts((prev) =>
       prev.map((post) =>
         post.id === id
-          ? { ...post, isLiked: !post.isLiked, likes: post.isLiked ? post.likes - 1 : post.likes + 1 }
+          ? { ...post, likes: post.likes + (increment ? 1 : -1) }
           : post
       )
     );
+
+    setLikedPosts((prev) => {
+      const next = new Set(prev);
+      if (increment) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+
+    await dbFunctions.updateCommunityPostLikes(id, increment);
   };
 
   const handleShare = async (id: string) => {
@@ -155,24 +100,73 @@ const Community = () => {
     }
   };
 
-  const submitReply = (e: React.FormEvent) => {
+  const submitReply = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!replyModal.postId || !replyText.trim()) return;
+    
+    const postId = replyModal.postId;
 
     setPosts((prev) =>
-      prev.map((post) => (post.id === replyModal.postId ? { ...post, replies: post.replies + 1 } : post))
+      prev.map((post) => (post.id === postId ? { ...post, replies: post.replies + 1 } : post))
     );
     setReplyText('');
     setReplyModal({ open: false });
+
+    await dbFunctions.addCommunityPostReply(postId);
+  };
+
+  const handleSubmitPost = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) {
+      alert("Please login to post");
+      return;
+    }
+
+    const tagsArray = newPost.tags
+      .split(',')
+      .map((tag) => tag.trim())
+      .filter(Boolean);
+
+    const postToCreate = {
+      user_id: user.id,
+      author_name: user.name || 'EcoWarrior',
+      title: newPost.title,
+      content: newPost.content,
+      category: newPost.category,
+      tags: tagsArray,
+      likes: 0,
+      replies: 0,
+      is_solved: false
+    };
+
+    setShowNewPost(false);
+    setNewPost({ title: '', content: '', category: 'question', tags: '' });
+    
+    // Optimistically show loading, but re-fetch everything
+    setLoading(true);
+    const success = await dbFunctions.createCommunityPost(postToCreate);
+    if (success) {
+      await fetchPosts();
+    } else {
+      alert("Failed to create post");
+      setLoading(false);
+    }
   };
 
   const filteredPosts = posts.filter((post) => {
     const matchesCategory = selectedCategory === 'all' || post.category === selectedCategory;
     const loweredSearch = searchTerm.toLowerCase();
+    
+    // Ensure safety in case arrays or strings are null from DB
+    const safeTitle = post.title || '';
+    const safeContent = post.content || '';
+    const safeTags = post.tags || [];
+
     const matchesSearch =
-      post.title.toLowerCase().includes(loweredSearch) ||
-      post.content.toLowerCase().includes(loweredSearch) ||
-      post.tags.some((tag) => tag.toLowerCase().includes(loweredSearch));
+      safeTitle.toLowerCase().includes(loweredSearch) ||
+      safeContent.toLowerCase().includes(loweredSearch) ||
+      safeTags.some((tag) => tag.toLowerCase().includes(loweredSearch));
+      
     return matchesCategory && matchesSearch;
   });
 
@@ -191,33 +185,10 @@ const Community = () => {
     }
   };
 
-  const handleSubmitPost = (e: React.FormEvent) => {
-    e.preventDefault();
-    const id = Date.now().toString();
-
-    setPosts((prev) => [
-      {
-        id,
-        author: 'You',
-        avatar: 'YU',
-        title: newPost.title,
-        content: newPost.content,
-        category: newPost.category,
-        timestamp: 'Just now',
-        likes: 0,
-        replies: 0,
-        isLiked: false,
-        isSolved: false,
-        tags: newPost.tags
-          .split(',')
-          .map((tag) => tag.trim())
-          .filter(Boolean)
-      },
-      ...prev
-    ]);
-
-    setShowNewPost(false);
-    setNewPost({ title: '', content: '', category: 'question', tags: '' });
+  const formatDate = (dateString: string) => {
+    if (!dateString) return 'Just now';
+    const date = new Date(dateString);
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
   return (
@@ -236,9 +207,9 @@ const Community = () => {
       <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-4">
         {[
           { label: 'Active Members', value: '2.4K', color: 'text-green-400 dark:text-emerald-400' },
-          { label: 'Posts Today', value: '47', color: 'text-blue-400 dark:text-sky-400' },
-          { label: 'Solved Questions', value: '156', color: 'text-purple-400 dark:text-violet-400' },
-          { label: 'Projects Shared', value: '89', color: 'text-orange-400 dark:text-orange-400' }
+          { label: 'Posts Today', value: posts.length, color: 'text-blue-400 dark:text-sky-400' },
+          { label: 'Solved Questions', value: posts.filter(p => p.is_solved).length, color: 'text-purple-400 dark:text-violet-400' },
+          { label: 'Projects Shared', value: posts.filter(p => p.category === 'project').length, color: 'text-orange-400 dark:text-orange-400' }
         ].map((stat) => (
           <motion.div
             key={stat.label}
@@ -292,103 +263,113 @@ const Community = () => {
       </div>
 
       <div className="space-y-6">
-        {filteredPosts.map((post) => (
-          <motion.div
-            key={post.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            whileHover={{ scale: 1.01 }}
-            className={`${glassCard} p-6`}
-          >
-            <div className="mb-4 flex items-start justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-r from-green-400 to-blue-500 text-sm font-bold text-white dark:from-emerald-500 dark:to-teal-500">
-                  {post.avatar}
+        {loading ? (
+          <div className="text-center p-10">
+            <p className="text-slate-500 dark:text-slate-400">Loading posts from Supabase...</p>
+          </div>
+        ) : filteredPosts.length === 0 ? (
+          <div className="text-center p-10">
+            <p className="text-slate-500 dark:text-slate-400">No posts found. Be the first to start a discussion!</p>
+          </div>
+        ) : (
+          filteredPosts.map((post) => (
+            <motion.div
+              key={post.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              whileHover={{ scale: 1.01 }}
+              className={`${glassCard} p-6`}
+            >
+              <div className="mb-4 flex items-start justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-r from-green-400 to-blue-500 text-sm font-bold text-white dark:from-emerald-500 dark:to-teal-500">
+                    {post.author_name ? post.author_name.substring(0, 2).toUpperCase() : 'EC'}
+                  </div>
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <h3 className="font-bold text-sky-950 dark:text-white">{post.author_name || 'Anonymous'}</h3>
+                      {post.is_solved && (
+                        <div className="flex items-center rounded-full bg-emerald-500 px-2 py-1 text-xs font-bold text-white">
+                          <Award className="mr-1 h-3 w-3" />
+                          Solved
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center text-sm text-sky-950/80 dark:text-slate-400">
+                      <Clock className="mr-1 h-4 w-4" />
+                      {formatDate(post.created_at)}
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <div className="flex items-center space-x-2">
-                    <h3 className="font-bold text-sky-950 dark:text-white">{post.author}</h3>
-                    {post.isSolved && (
-                      <div className="flex items-center rounded-full bg-emerald-500 px-2 py-1 text-xs font-bold text-white">
-                        <Award className="mr-1 h-3 w-3" />
-                        Solved
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-center text-sm text-sky-950/80 dark:text-slate-400">
-                    <Clock className="mr-1 h-4 w-4" />
-                    {post.timestamp}
-                  </div>
+                <div className={`rounded-full border px-3 py-1 text-sm font-bold ${getCategoryColor(post.category)}`}>
+                  {categories.find((category) => category.id === post.category)?.name}
                 </div>
               </div>
-              <div className={`rounded-full border px-3 py-1 text-sm font-bold ${getCategoryColor(post.category)}`}>
-                {categories.find((category) => category.id === post.category)?.name}
+
+              <h2 className="mb-3 text-xl font-bold text-sky-950 dark:text-white">{post.title}</h2>
+              <p className="mb-4 leading-relaxed text-sky-950/85 dark:text-slate-300">{post.content}</p>
+
+              <div className="mb-4 flex flex-wrap gap-2">
+                {(post.tags || []).map((tag) => (
+                  <span
+                    key={tag}
+                    className="rounded-lg bg-sky-100/80 px-2 py-1 text-sm text-sky-950/95 dark:border dark:border-white/10 dark:bg-white/5 dark:text-slate-300"
+                  >
+                    #{tag}
+                  </span>
+                ))}
               </div>
-            </div>
 
-            <h2 className="mb-3 text-xl font-bold text-sky-950 dark:text-white">{post.title}</h2>
-            <p className="mb-4 leading-relaxed text-sky-950/85 dark:text-slate-300">{post.content}</p>
+              <div className="flex items-center justify-between border-t border-white/10 pt-4">
+                <div className="flex items-center space-x-4">
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => handleLike(post.id)}
+                    className={`flex items-center space-x-2 rounded-lg px-3 py-2 transition-theme duration-300 ${
+                      likedPosts.has(post.id)
+                        ? 'bg-green-100 text-green-900 dark:text-emerald-300'
+                        : 'border border-slate-200/80 bg-white/88 text-slate-800 hover:bg-white dark:border dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10'
+                    }`}
+                  >
+                    <ThumbsUp className="h-4 w-4" />
+                    <span className="text-sm font-medium">{post.likes}</span>
+                  </motion.button>
 
-            <div className="mb-4 flex flex-wrap gap-2">
-              {post.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="rounded-lg bg-sky-100/80 px-2 py-1 text-sm text-sky-950/95 dark:border dark:border-white/10 dark:bg-white/5 dark:text-slate-300"
-                >
-                  #{tag}
-                </span>
-              ))}
-            </div>
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => setReplyModal({ open: true, postId: post.id })}
+                    className="flex items-center space-x-2 rounded-lg border border-slate-200/80 bg-white/88 px-3 py-2 text-sky-950 transition-theme duration-300 hover:bg-white dark:border dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    <span className="text-sm font-medium">{post.replies}</span>
+                  </motion.button>
 
-            <div className="flex items-center justify-between border-t border-white/10 pt-4">
-              <div className="flex items-center space-x-4">
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => handleShare(post.id)}
+                    className="flex items-center space-x-2 rounded-lg border border-slate-200/80 bg-white/88 px-3 py-2 text-sky-950 transition-theme duration-300 hover:bg-white dark:border dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
+                  >
+                    <Share2 className="h-4 w-4" />
+                    <span className="text-sm font-medium">Share</span>
+                  </motion.button>
+                </div>
+
                 <motion.button
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  onClick={() => handleLike(post.id)}
-                  className={`flex items-center space-x-2 rounded-lg px-3 py-2 transition-theme duration-300 ${
-                    post.isLiked
-                      ? 'bg-green-100 text-green-900 dark:text-emerald-300'
-                      : 'border border-slate-200/80 bg-white/88 text-slate-800 hover:bg-white dark:border dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10'
-                  }`}
-                >
-                  <ThumbsUp className="h-4 w-4" />
-                  <span className="text-sm font-medium">{post.likes}</span>
-                </motion.button>
-
-                <motion.button
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                   onClick={() => setReplyModal({ open: true, postId: post.id })}
-                  className="flex items-center space-x-2 rounded-lg border border-slate-200/80 bg-white/88 px-3 py-2 text-sky-950 transition-theme duration-300 hover:bg-white dark:border dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
+                  className={`${primaryButton} px-4 py-2`}
                 >
-                  <MessageCircle className="h-4 w-4" />
-                  <span className="text-sm font-medium">{post.replies}</span>
-                </motion.button>
-
-                <motion.button
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  onClick={() => handleShare(post.id)}
-                  className="flex items-center space-x-2 rounded-lg border border-slate-200/80 bg-white/88 px-3 py-2 text-sky-950 transition-theme duration-300 hover:bg-white dark:border dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
-                >
-                  <Share2 className="h-4 w-4" />
-                  <span className="text-sm font-medium">Share</span>
+                  <Reply className="h-4 w-4" />
+                  Reply
                 </motion.button>
               </div>
-
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setReplyModal({ open: true, postId: post.id })}
-                className={`${primaryButton} px-4 py-2`}
-              >
-                <Reply className="h-4 w-4" />
-                Reply
-              </motion.button>
-            </div>
-          </motion.div>
-        ))}
+            </motion.div>
+          ))
+        )}
       </div>
 
       <AnimatePresence>
