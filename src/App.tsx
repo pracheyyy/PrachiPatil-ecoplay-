@@ -4,7 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { GameProvider } from './context/GameContext';
 import Layout from './components/Layout';
 
-import Login from './pages/Login';
+import Auth from './pages/Auth';
 import Dashboard from './pages/Dashboard';
 import OceanCleanupGame from './pages/OceanCleanupGame';
 import EcoVillage from './pages/EcoVillage';
@@ -13,8 +13,22 @@ import Bingo from './pages/Bingo';
 import Community from './pages/Community';
 import Events from './pages/Events';
 
+/**
+ * Protects routes that require authentication.
+ * Shows a loading indicator while the Supabase session is being restored
+ * to prevent a flash of redirect on page refresh.
+ */
 const Protected: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-white text-xl">
+        Loading...
+      </div>
+    );
+  }
+
   if (!user) return <Navigate to="/login" replace />;
   return <Layout>{children}</Layout>;
 };
@@ -25,7 +39,10 @@ export default function App() {
       <GameProvider>
         <BrowserRouter>
           <Routes>
-            <Route path="/login" element={<Login />} />
+            {/* Public route — uses the Supabase-backed Auth page */}
+            <Route path="/login" element={<Auth />} />
+
+            {/* Protected routes */}
             <Route path="/" element={<Protected><Dashboard /></Protected>} />
             <Route path="/dashboard" element={<Protected><Dashboard /></Protected>} />
             <Route path="/ocean-cleanup-game" element={<Protected><OceanCleanupGame /></Protected>} />
@@ -34,6 +51,8 @@ export default function App() {
             <Route path="/bingo" element={<Protected><Bingo /></Protected>} />
             <Route path="/community" element={<Protected><Community /></Protected>} />
             <Route path="/events" element={<Protected><Events /></Protected>} />
+
+            {/* Fallback */}
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </BrowserRouter>
