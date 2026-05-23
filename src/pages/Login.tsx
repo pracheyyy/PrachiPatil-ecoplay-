@@ -79,7 +79,7 @@ const Login = () => {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 20 }}
               >
-                <h2 className="mb-4 text-2xl font-bold text-sky-950 dark:text-white">Select Profile</h2>
+                <h2 className="mb-4 text-2xl font-bold text-sky-950 dark:text-white text-center">Select Profile</h2>
 
                 {users.length === 0 ? (
                   <div className="py-8 text-center">
