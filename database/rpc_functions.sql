@@ -1,4 +1,6 @@
--- ─── RPC 1: Paginated leaderboard with DENSE_RANK ─────────────
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+--─── RPC 1: Paginated leaderboard with DENSE_RANK ─────────────
 CREATE OR REPLACE FUNCTION get_leaderboard(
   p_limit INT DEFAULT 10,
   p_offset INT DEFAULT 0
