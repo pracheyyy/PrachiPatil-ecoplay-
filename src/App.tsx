@@ -5,13 +5,14 @@ import { GameProvider } from './context/GameContext';
 import Layout from './components/Layout';
 
 import Auth from './pages/Auth';
-import Dashboard from './pages/Dashboard';
-import OceanCleanupGame from './pages/OceanCleanupGame';
-import EcoVillage from './pages/EcoVillage';
-import Learn from './pages/Learn';
 import Bingo from './pages/Bingo';
 import Community from './pages/Community';
+import Dashboard from './pages/Dashboard';
+import EcoVillage from './pages/EcoVillage';
 import Events from './pages/Events';
+import LandingPage from './pages/LandingPage';
+import Learn from './pages/Learn';
+import OceanCleanupGame from './pages/OceanCleanupGame';
 
 /**
  * Protects routes that require authentication.
@@ -30,6 +31,7 @@ const Protected: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   }
 
   if (!user) return <Navigate to="/login" replace />;
+
   return <Layout>{children}</Layout>;
 };
 
@@ -39,11 +41,11 @@ export default function App() {
       <GameProvider>
         <BrowserRouter>
           <Routes>
-            {/* Public route — uses the Supabase-backed Auth page */}
+            {/* Public routes */}
+            <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<Auth />} />
 
             {/* Protected routes */}
-            <Route path="/" element={<Protected><Dashboard /></Protected>} />
             <Route path="/dashboard" element={<Protected><Dashboard /></Protected>} />
             <Route path="/ocean-cleanup-game" element={<Protected><OceanCleanupGame /></Protected>} />
             <Route path="/eco-village" element={<Protected><EcoVillage /></Protected>} />

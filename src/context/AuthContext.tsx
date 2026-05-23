@@ -19,9 +19,9 @@ function toAppUser(supabaseUser: any): User {
   };
 }
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
+export const AuthProvider: React.FC<{
+  children: React.ReactNode;
+}> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -37,37 +37,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ? toAppUser(session.user) : null);
+      if (session?.user) {
+        setUser(toAppUser(session.user));
+      } else {
+        setUser(null);
+      }
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
-
-  const login = async (
-    email: string,
-    password: string
-  ): Promise<AuthResponse> => {
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
-        password,
-      });
-
-      if (error) {
-        return { success: false, error: error.message };
-      }
-
-      if (!data.user) {
-        return { success: false, error: "Login failed — please try again." };
-      }
-
-      return { success: true, user: toAppUser(data.user) };
-    } catch (err: any) {
-      console.error("[Auth] Login error:", err);
-      return { success: false, error: "An unexpected error occurred." };
-    }
-  };
 
   const register = async (
     name: string,
@@ -138,13 +119,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  const logout = async () => {
+  const login = async (
+    email: string,
+    password: string
+  ): Promise<AuthResponse> => {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password,
+      });
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      if (!data.user) {
+        return { success: false, error: "Login failed — please try again." };
+      }
+
+      return { success: true, user: toAppUser(data.user) };
+    } catch (err: any) {
+      console.error("[Auth] Login error:", err);
+      return { success: false, error: "An unexpected error occurred." };
+    }
+  };
+
+  const logout = async (): Promise<void> => {
     await supabase.auth.signOut();
-    // onAuthStateChange fires automatically and sets user → null
+    setUser(null);
+    // onAuthStateChange also fires and sets user → null for safety
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        login,
+        register,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
