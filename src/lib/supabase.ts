@@ -10,6 +10,7 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  avatar_url?: string | null;
   points: number;
   level: number;
   eco_score: number;
