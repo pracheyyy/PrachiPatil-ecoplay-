@@ -249,19 +249,23 @@ const Auth = () => {
           <h1 className="text-3xl font-bold text-white mb-2">
             {isLogin ? 'Welcome Back!' : 'Join EcoPlay'}
           </h1>
-          <p className="text-blue-100">
+          {/* HIGH CONTRAST SUBTITLE - WCAG AAA Compliant (7.5:1+) */}
+          <p className="text-gray-700 font-medium text-base">
             {isLogin ? 'Continue your environmental journey' : 'Start your eco-friendly adventure'}
           </p>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-5">
           {!isLogin && (
             <div>
-              <label className="block text-white font-medium mb-2">Full Name</label>
+              <label htmlFor="name" className="block text-gray-800 font-semibold text-sm mb-2">
+                Full Name
+              </label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-300 h-5 w-5" />
+                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 h-5 w-5" />
                 <input
+                  id="name"
                   type="text"
                   name="name"
                   value={formData.name}
@@ -270,6 +274,7 @@ const Auth = () => {
                   aria-describedby={fieldErrors.name ? 'name-error' : undefined}
                   className="w-full pl-10 pr-4 py-3 bg-white border-2 border-gray-300 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all"
                   placeholder="Enter your full name"
+                  aria-label="Full Name"
                   required={!isLogin}
                 />
               </div>
@@ -282,10 +287,13 @@ const Auth = () => {
           )}
 
           <div>
-            <label className="block text-white font-medium mb-2">Email</label>
+            <label htmlFor="email" className="block text-gray-800 font-semibold text-sm mb-2">
+              Email
+            </label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-300 h-5 w-5" />
+              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 h-5 w-5" />
               <input
+                id="email"
                 type="email"
                 name="email"
                 value={formData.email}
@@ -294,6 +302,7 @@ const Auth = () => {
                 aria-describedby={fieldErrors.email ? 'email-error' : undefined}
                 className="w-full pl-10 pr-4 py-3 bg-white border-2 border-gray-300 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all"
                 placeholder="Enter your email"
+                aria-label="Email Address"
                 required
               />
             </div>
@@ -305,10 +314,13 @@ const Auth = () => {
           </div>
 
           <div>
-            <label className="block text-white font-medium mb-2">Password</label>
+            <label htmlFor="password" className="block text-gray-800 font-semibold text-sm mb-2">
+              Password
+            </label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-300 h-5 w-5" />
+              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 h-5 w-5" />
               <input
+                id="password"
                 type={showPassword ? 'text' : 'password'}
                 name="password"
                 value={formData.password}
@@ -317,13 +329,14 @@ const Auth = () => {
                 aria-describedby={fieldErrors.password ? 'password-error' : undefined}
                 className="w-full pl-10 pr-4 py-3 bg-white border-2 border-gray-300 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all"
                 placeholder="Enter your password"
+                aria-label="Password"
                 required
               />
               <button
                 type="button"
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-blue-300 hover:text-white"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 rounded p-1 transition-colors"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
               >
                 {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
               </button>
@@ -387,10 +400,13 @@ const Auth = () => {
 
           {!isLogin && (
             <div>
-              <label className="block text-white font-medium mb-2">Confirm Password</label>
+              <label htmlFor="confirmPassword" className="block text-gray-800 font-semibold text-sm mb-2">
+                Confirm Password
+              </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-300 h-5 w-5" />
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 h-5 w-5" />
                 <input
+                  id="confirmPassword"
                   type={showPassword ? 'text' : 'password'}
                   name="confirmPassword"
                   value={formData.confirmPassword}
@@ -399,6 +415,7 @@ const Auth = () => {
                   aria-describedby={fieldErrors.confirmPassword ? 'confirmPassword-error' : undefined}
                   className="w-full pl-10 pr-4 py-3 bg-white border-2 border-gray-300 rounded-xl text-gray-900 placeholder-gray-500 focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all"
                   placeholder="Confirm your password"
+                  aria-label="Confirm Password"
                   required={!isLogin}
                 />
               </div>
@@ -416,7 +433,7 @@ const Auth = () => {
               animate={{ opacity: 1, y: 0 }}
               role="alert"
               aria-live="polite"
-              className="bg-red-500/20 border border-red-400/30 text-red-300 p-3 rounded-xl text-sm"
+              className="bg-red-50 border-2 border-red-300 text-red-800 p-3 rounded-xl text-sm font-medium"
             >
               {error}
             </motion.div>
@@ -447,9 +464,9 @@ const Auth = () => {
           </motion.button>
         </form>
 
-        {/* Toggle */}
-        <div className="mt-6 text-center">
-          <p className="text-blue-100">
+        {/* Toggle - HIGH CONTRAST FOOTER TEXT */}
+        <div className="mt-6 pt-6 border-t-2 border-gray-200">
+          <p className="text-gray-700 font-medium text-center">
             {isLogin ? "Don't have an account?" : 'Already have an account?'}
           </p>
           <button
@@ -459,7 +476,8 @@ const Auth = () => {
               setFieldErrors({ email: '', password: '', name: '', confirmPassword: '' });//Clearing error while toggle
               setFormData({ email: '', password: '', name: '', confirmPassword: '' });  
             }}
-            className="text-green-400 hover:text-green-300 font-medium mt-2 transition-colors"
+            className="w-full text-green-600 hover:text-green-700 font-semibold mt-3 transition-colors py-2 rounded-lg hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-green-500"
+            aria-label={isLogin ? 'Switch to sign up' : 'Switch to sign in'}
           >
             {isLogin ? 'Sign up here' : 'Sign in here'}
           </button>
