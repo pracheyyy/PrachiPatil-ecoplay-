@@ -14,6 +14,7 @@ const Events = React.lazy(() => import('./pages/Events'));
 const LandingPage = React.lazy(() => import('./pages/LandingPage'));
 const Learn = React.lazy(() => import('./pages/Learn'));
 const OceanCleanupGame = React.lazy(() => import('./pages/OceanCleanupGame'));
+const Journey = React.lazy(() => import('./pages/Journey'));
 
 /**
  * Protects routes that require authentication.
@@ -57,6 +58,7 @@ export default function App() {
                 <Route path="/ocean-cleanup-game" element={<Protected><OceanCleanupGame /></Protected>} />
                 <Route path="/eco-village" element={<Protected><EcoVillage /></Protected>} />
                 <Route path="/learn" element={<Protected><Learn /></Protected>} />
+                <Route path="/journey" element={<Protected><Journey /></Protected>} />
                 <Route path="/bingo" element={<Protected><Bingo /></Protected>} />
                 <Route path="/community" element={<Protected><Community /></Protected>} />
                 <Route path="/events" element={<Protected><Events /></Protected>} />
